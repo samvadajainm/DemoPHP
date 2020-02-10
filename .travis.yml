@@ -1,0 +1,37 @@
+language: php
+dist: xenial
+php:
+- '7.2'
+
+cache:
+  directories:
+    - "$HOME/.composer/cache"
+
+# Install terminus
+before_install:
+  - sudo apt-get -y update || true
+  - sudo apt-get -y install curl
+  - phpenv config-rm xdebug.ini
+  - composer self-update
+  - mkdir -p /tmp/terminus && cd /tmp/terminus
+  - curl -O https://raw.githubusercontent.com/pantheon-systems/terminus-installer/master/builds/installer.phar && php installer.phar install
+  - PATH="/tmp/terminus/vendor/bin:$PATH"
+  - terminus auth:login --machine-token=$PANTHEON_MACHINE_TOKEN
+
+script:
+  - cd $TRAVIS_BUILD_DIR
+  - composer install
+
+  # Check code standards
+  - composer code-sniff
+
+  # Do needed things to get this repo transformed to what pantheon expects
+  - composer build-assets
+
+# Merge into master via deploy script
+deploy:
+  provider: script
+  script: scripts/travis/deploy.sh
+  skip_cleanup: true
+  on:
+    branch: master
